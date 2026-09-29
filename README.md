@@ -2,6 +2,8 @@
 
 A serverless microservices platform for managing products, pricing, entitlements, and billing events in a payment system. Built with AWS Lambda, API Gateway, DynamoDB, SNS, and SQS.
 
+This uses Stripe and Powertranz to handle debit and credit card payments utilizing 3DS or not. If interested in using in your project contact me as there is a way to connect this to your api gateway on AWS.
+
 ## Configuration
 
 ### Project Name
