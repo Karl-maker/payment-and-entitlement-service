@@ -3,13 +3,15 @@ import { APIGatewayProxyResult } from "aws-lambda";
 /** CORS headers for all origins */
 export const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-API-Key",
+  "Access-Control-Allow-Methods":
+    "GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers":
+    "Content-Type, Authorization, X-API-Key, Idempotency-Key",
 };
 
 export function response(
   statusCode: number,
-  body: unknown
+  body: unknown,
 ): APIGatewayProxyResult {
   return {
     statusCode,
@@ -17,7 +19,7 @@ export function response(
       "Content-Type": "application/json",
       ...corsHeaders,
     },
-    body: JSON.stringify(body)
+    body: JSON.stringify(body),
   };
 }
 
@@ -26,7 +28,7 @@ export function errorResponse(error: any): APIGatewayProxyResult {
   if (error.name === "AuthenticationError") {
     return response(401, {
       error: "UNAUTHORIZED",
-      message: error.message
+      message: error.message,
     });
   }
 
@@ -34,21 +36,34 @@ export function errorResponse(error: any): APIGatewayProxyResult {
   if (error.name === "NotFoundError") {
     return response(404, {
       error: "NOT_FOUND",
-      message: error.message
+      message: error.message,
     });
   }
 
   if (error.name === "DomainError") {
+    if (
+      (error as any).code === "RATE_LIMITED" ||
+      error.message.includes("rate limited")
+    ) {
+      return response(429, {
+        error: "RATE_LIMITED",
+        message: error.message,
+      });
+    }
+
     // Check for insufficient funds error
-    if ((error as any).code === "INSUFFICIENT_FUNDS" || error.message.includes("Insufficient tokens")) {
+    if (
+      (error as any).code === "INSUFFICIENT_FUNDS" ||
+      error.message.includes("Insufficient tokens")
+    ) {
       return response(402, {
         error: "PAYMENT_REQUIRED",
-        message: error.message
+        message: error.message,
       });
     }
     return response(400, {
       error: "DOMAIN_ERROR",
-      message: error.message
+      message: error.message,
     });
   }
 
@@ -57,7 +72,7 @@ export function errorResponse(error: any): APIGatewayProxyResult {
     return response(400, {
       error: "VALIDATION_ERROR",
       message: error.message,
-      details: error.details
+      details: error.details,
     });
   }
 
@@ -69,6 +84,6 @@ export function errorResponse(error: any): APIGatewayProxyResult {
 
   return response(500, {
     error: "INTERNAL_SERVER_ERROR",
-    message: "Something went wrong"
+    message: "Something went wrong",
   });
 }

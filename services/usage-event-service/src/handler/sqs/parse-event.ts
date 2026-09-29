@@ -12,7 +12,7 @@ export function parseSqsRecord(record: SQSRecord): UsageDomainEvent {
     body = JSON.parse(record.body);
   } catch (error) {
     throw new Error(
-      `Failed to parse SQS record body: ${error instanceof Error ? error.message : String(error)}`
+      `Failed to parse SQS record body: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
 
@@ -20,14 +20,11 @@ export function parseSqsRecord(record: SQSRecord): UsageDomainEvent {
 
   if (!payload.userId || !payload.entitlementKey) {
     throw new Error(
-      "Invalid usage event: missing required fields (userId, entitlementKey)"
+      "Invalid usage event: missing required fields (userId, entitlementKey)",
     );
   }
 
-  const amount =
-    typeof payload.amount === "number" && payload.amount >= 0
-      ? payload.amount
-      : 1;
+  const amount = typeof payload.amount === "number" ? payload.amount : 1;
 
   return {
     userId: payload.userId,

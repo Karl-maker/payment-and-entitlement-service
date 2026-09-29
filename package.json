@@ -7,15 +7,29 @@
     "scripts": {
         "build": "turbo run build",
         "package": "turbo run package",
-        "deploy": "turbo run deploy"
+        "deploy": "turbo run deploy",
+        "test": "jest --config jest.config.js",
+        "test:unit": "jest --config jest.unit.config.js",
+        "test:integration": "bash scripts/run-with-test-compose.sh jest.integration.config.js",
+        "test:e2e": "bash scripts/run-with-test-compose.sh jest.e2e.config.js",
+        "test:unit:only": "jest --config jest.unit.config.js -t",
+        "test:integration:only": "bash scripts/run-with-test-compose.sh jest.integration.config.js",
+        "test:e2e:only": "bash scripts/run-with-test-compose.sh jest.e2e.config.js"
     },
     "devDependencies": {
+        "@types/aws-lambda": "^8.10.160",
+        "@types/jest": "^30.0.0",
         "@types/jsonwebtoken": "^9.0.10",
+        "jest": "^30.3.0",
+        "ts-jest": "^29.4.6",
         "turbo": "^1.13.0",
         "typescript": "^5.3.0"
     },
     "dependencies": {
+        "@aws-sdk/client-dynamodb": "^3.975.0",
         "@aws-sdk/client-sns": "^3.975.0",
+        "@aws-sdk/client-sqs": "^3.975.0",
+        "@aws-sdk/lib-dynamodb": "^3.975.0",
         "jsonwebtoken": "^9.0.3"
     }
 }

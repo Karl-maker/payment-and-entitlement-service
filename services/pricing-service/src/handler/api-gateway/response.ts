@@ -38,6 +38,20 @@ export function errorResponse(error: any): APIGatewayProxyResult {
     });
   }
 
+  if (error.name === "AuthenticationError") {
+    return response(error.statusCode ?? 401, {
+      error: "UNAUTHORIZED",
+      message: error.message,
+    });
+  }
+
+  if (error.name === "ForbiddenError") {
+    return response(error.statusCode ?? 403, {
+      error: "FORBIDDEN",
+      message: error.message,
+    });
+  }
+
   // Fallback (log for debugging, but never leak internals to client)
   console.error("Unhandled error:", error);
   console.error("Error stack:", error.stack);

@@ -8,6 +8,7 @@ export type TransactionType =
   | "subscription.expired";
 
 export type TransactionStatus = "success" | "failed" | "pending" | "action_required";
+export type TransactionProvider = "stripe" | "powertranz";
 
 export class Transaction {
   constructor(
@@ -21,6 +22,7 @@ export class Transaction {
     public readonly productId?: string,
     public readonly priceId?: string,
     public readonly subscriptionId?: string,
+    public readonly provider?: TransactionProvider,
     public readonly metadata?: Record<string, any> // Additional event-specific data
   ) {}
 
@@ -32,6 +34,7 @@ export class Transaction {
     const status = mapEventTypeToStatus(eventType, payload);
     const amount = payload.amount || 0;
     const currency = payload.currency || "USD";
+    const provider = normalizeTransactionProvider(payload.provider);
 
     return new Transaction(
       payload.paymentIntentId || payload.subscriptionId || eventId,
@@ -44,8 +47,10 @@ export class Transaction {
       payload.productId,
       payload.priceId,
       payload.subscriptionId,
+      provider,
       {
         eventId,
+        provider,
         failureCode: payload.failureCode,
         failureReason: payload.failureReason,
         portalUrl: payload.portalUrl,
@@ -56,6 +61,16 @@ export class Transaction {
       }
     );
   }
+}
+
+function normalizeTransactionProvider(
+  provider: unknown
+): TransactionProvider | undefined {
+  if (provider !== "stripe" && provider !== "powertranz") {
+    return undefined;
+  }
+
+  return provider;
 }
 
 function mapEventTypeToStatus(

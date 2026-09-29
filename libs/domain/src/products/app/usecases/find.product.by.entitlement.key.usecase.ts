@@ -18,19 +18,24 @@ export interface ProductByEntitlementDto {
 }
 
 export class FindProductByEntitlementKeyUseCase {
-  constructor(
-    private readonly repo: ProductRepository
-  ) {}
+  constructor(private readonly repo: ProductRepository) {}
 
   /**
    * Search ALL product types (subscription, one_off, addon) and return ALL products
    * that include the given entitlement key. Returns empty array if none match.
    */
-  async execute(entitlementKey: string): Promise<ProductByEntitlementDto[]> {
+  async execute(
+    entitlementKey: string,
+    context?: {
+      userId?: string;
+      country?: string;
+      ipAddress?: string;
+    },
+  ): Promise<ProductByEntitlementDto[]> {
     const types: ProductType[] = [
       ProductType.SUBSCRIPTION,
       ProductType.ONE_OFF,
-      ProductType.ADDON
+      ProductType.ADDON,
     ];
     const pageSize = 100;
     const all: ProductByEntitlementDto[] = [];
@@ -40,8 +45,15 @@ export class FindProductByEntitlementKeyUseCase {
       let hasMore = true;
       while (hasMore) {
         const result = await this.repo.list(
-          { isActive: true, type: productType, entitlementKey },
-          { pageNumber, pageSize }
+          {
+            isActive: true,
+            type: productType,
+            entitlementKey,
+            userId: context?.userId,
+            country: context?.country,
+            ipAddress: context?.ipAddress,
+          },
+          { pageNumber, pageSize },
         );
         for (const p of result.items) {
           all.push(this.toDto(p));
@@ -67,7 +79,7 @@ export class FindProductByEntitlementKeyUseCase {
       providers: p.providers,
       isActive: p.isActive,
       createdAt: p.createdAt,
-      updatedAt: p.updatedAt
+      updatedAt: p.updatedAt,
     };
   }
 }

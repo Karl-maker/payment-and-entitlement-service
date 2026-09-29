@@ -140,6 +140,23 @@ resource "aws_iam_role_policy" "secrets_manager" {
   })
 }
 
+# Additional IAM Policy for SNS (entitlement updates)
+resource "aws_iam_role_policy" "sns_entitlement_updates" {
+  name = "trial-service-sns-entitlement-updates-${var.environment}"
+  role = module.trial_service_iam_role.role_name
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["sns:Publish"]
+        Resource = data.terraform_remote_state.access_service.outputs.entitlement_updates_topic_arn
+      }
+    ]
+  })
+}
+
 module "trial_service_lambda" {
   source = "../../modules/lambda"
 
@@ -150,10 +167,11 @@ module "trial_service_lambda" {
   iam_role_arn  = module.trial_service_iam_role.role_arn
 
   environment_variables = {
-    TRIALS_TABLE           = aws_dynamodb_table.trials.name
-    PRODUCTS_TABLE         = data.terraform_remote_state.product_service.outputs.products_table_name
-    ENTITLEMENTS_TABLE     = data.terraform_remote_state.access_service.outputs.entitlements_table_name
-    JWT_ACCESS_TOKEN_SECRET = local.jwt_access_token_secret
+    TRIALS_TABLE                = aws_dynamodb_table.trials.name
+    PRODUCTS_TABLE              = data.terraform_remote_state.product_service.outputs.products_table_name
+    ENTITLEMENTS_TABLE          = data.terraform_remote_state.access_service.outputs.entitlements_table_name
+    ENTITLEMENT_UPDATES_TOPIC_ARN = data.terraform_remote_state.access_service.outputs.entitlement_updates_topic_arn
+    JWT_ACCESS_TOKEN_SECRET     = local.jwt_access_token_secret
   }
 }
 

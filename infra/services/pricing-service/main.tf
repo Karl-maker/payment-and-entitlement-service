@@ -39,6 +39,31 @@ data "terraform_remote_state" "foundation" {
   }
 }
 
+data "terraform_remote_state" "product_service" {
+  backend = "s3"
+
+  config = {
+    bucket = "${var.project_name}-${var.environment}-product-service-state"
+    key    = "tf-infra/${var.environment}.tfstate"
+    region = "us-east-1"
+  }
+}
+
+data "aws_secretsmanager_secret" "jwt_access_token_secret" {
+  name = "${var.project_name}-${var.environment}-jwt-access-token-secret"
+}
+
+data "aws_secretsmanager_secret_version" "jwt_access_token_secret" {
+  secret_id = data.aws_secretsmanager_secret.jwt_access_token_secret.id
+}
+
+locals {
+  jwt_access_token_secret = try(
+    jsondecode(data.aws_secretsmanager_secret_version.jwt_access_token_secret.secret_string)["key"],
+    data.aws_secretsmanager_secret_version.jwt_access_token_secret.secret_string
+  )
+}
+
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
@@ -90,13 +115,35 @@ module "pricing_service_iam_role" {
   
   dynamodb_table_arns = [
     aws_dynamodb_table.prices.arn,
-    "${aws_dynamodb_table.prices.arn}/index/*"
+    "${aws_dynamodb_table.prices.arn}/index/*",
+    data.terraform_remote_state.product_service.outputs.products_table_arn,
+    "${data.terraform_remote_state.product_service.outputs.products_table_arn}/index/*"
   ]
 
   tags = {
     Environment = var.environment
     Service     = "pricing-service"
   }
+}
+
+resource "aws_iam_role_policy" "pricing_service_secrets_manager" {
+  name = "pricing-service-secrets-manager-${var.environment}"
+  role = module.pricing_service_iam_role.role_name
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue"
+        ]
+        Resource = [
+          data.aws_secretsmanager_secret.jwt_access_token_secret.arn
+        ]
+      }
+    ]
+  })
 }
 
 module "pricing_service_lambda" {
@@ -109,7 +156,9 @@ module "pricing_service_lambda" {
   iam_role_arn  = module.pricing_service_iam_role.role_arn
 
   environment_variables = {
-    PRICES_TABLE = aws_dynamodb_table.prices.name
+    PRICES_TABLE           = aws_dynamodb_table.prices.name
+    PRODUCTS_TABLE         = data.terraform_remote_state.product_service.outputs.products_table_name
+    JWT_ACCESS_TOKEN_SECRET = local.jwt_access_token_secret
   }
 }
 

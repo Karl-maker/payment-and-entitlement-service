@@ -7,7 +7,9 @@ import {
   EntitlementKey,
   EntitlementStatus,
   DomainError,
+  type EntitlementUpdateNotifier,
 } from "@libs/domain";
+import { ProcessedTokenChargesRepository } from "../../infrastructure/processed-token-charges.repository";
 
 class NotFoundError extends DomainError {
   constructor(message: string) {
@@ -19,6 +21,7 @@ class NotFoundError extends DomainError {
 export interface ChargeTokenInput {
   userId: string;
   priceId: string;
+  idempotencyKey?: string;
 }
 
 export interface ChargeTokenOutput {
@@ -36,11 +39,24 @@ export class ChargeTokenUseCase {
     private readonly priceRepo: PriceRepository,
     private readonly productRepo: ProductRepositoryPorts.ProductRepository,
     private readonly createEntitlementUseCase: CreateEntitlementUseCase,
-    private readonly syncProductLimitsUseCase: SyncProductLimitsToEntitlementsUseCase
+    private readonly syncProductLimitsUseCase: SyncProductLimitsToEntitlementsUseCase,
+    private readonly entitlementUpdateNotifier?: EntitlementUpdateNotifier,
+    private readonly processedTokenChargesRepo?: ProcessedTokenChargesRepository,
   ) {}
 
   async execute(input: ChargeTokenInput): Promise<ChargeTokenOutput> {
-    const { userId, priceId } = input;
+    const { userId, priceId, idempotencyKey } = input;
+
+    // check for cached response first before doing any processing, to handle duplicated requests with same idempotency key
+    if (idempotencyKey && this.processedTokenChargesRepo) {
+      const cachedResponse =
+        await this.processedTokenChargesRepo.getCachedResponse<ChargeTokenOutput>(
+          idempotencyKey,
+        );
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+    }
 
     // Get price
     const price = await this.priceRepo.findById(priceId);
@@ -51,7 +67,7 @@ export class ChargeTokenUseCase {
     // Validate currency is "token"
     if (price.currency.toLowerCase() !== "token") {
       throw new DomainError(
-        `Price '${priceId}' does not use token currency. Currency: ${price.currency}`
+        `Price '${priceId}' does not use token currency. Currency: ${price.currency}`,
       );
     }
 
@@ -64,29 +80,47 @@ export class ChargeTokenUseCase {
     // Get user's token entitlement
     let entitlement = await this.entitlementRepo.findByUserAndKey(
       userId,
-      "token"
+      "token",
     );
 
     if (!entitlement) {
       throw new NotFoundError(
-        `Token entitlement not found for user '${userId}'`
+        `Token entitlement not found for user '${userId}'`,
       );
     }
 
     if (!entitlement.isActive()) {
-      throw new DomainError(`Token entitlement is not active for user '${userId}'`);
+      throw new DomainError(
+        `Token entitlement is not active for user '${userId}'`,
+      );
     }
 
     if (!entitlement.usage) {
       throw new DomainError(`Token entitlement is not usage-based`);
     }
 
+    // Check rate limit before mutating any token state
+    if (this.processedTokenChargesRepo) {
+      const canCharge = await this.processedTokenChargesRepo.canCharge(userId);
+      if (!canCharge) {
+        const error = new DomainError(
+          `Token purchases are rate limited for user '${userId}'`,
+        );
+        (error as any).code = "RATE_LIMITED";
+        throw error;
+      }
+    }
+
     // Lazy evaluation: reset usage if period has passed
     if (entitlement.usage.shouldReset()) {
       entitlement.usage.reset();
       await this.entitlementRepo.update(entitlement);
+      await this.entitlementUpdateNotifier?.notify(entitlement);
       // Re-fetch to ensure we have fresh usage
-      const updated = await this.entitlementRepo.findByUserAndKey(userId, "token");
+      const updated = await this.entitlementRepo.findByUserAndKey(
+        userId,
+        "token",
+      );
       if (!updated?.usage) {
         throw new DomainError(`Token entitlement is not usage-based`);
       }
@@ -100,11 +134,12 @@ export class ChargeTokenUseCase {
 
     // Check if user has enough tokens
     const requiredAmount = price.amount;
-    const availableTokens = entitlement.usage.getEffectiveLimit() - entitlement.usage.used;
+    const availableTokens =
+      entitlement.usage.getEffectiveLimit() - entitlement.usage.used;
 
     if (availableTokens < requiredAmount) {
       const error = new DomainError(
-        `Insufficient tokens. Required: ${requiredAmount}, Available: ${availableTokens}`
+        `Insufficient tokens. Required: ${requiredAmount}, Available: ${availableTokens}`,
       );
       (error as any).code = "INSUFFICIENT_FUNDS";
       throw error;
@@ -113,29 +148,48 @@ export class ChargeTokenUseCase {
     // Decrement tokens by increasing used amount
     entitlement.usage.used += requiredAmount;
     await this.entitlementRepo.update(entitlement);
+    await this.entitlementUpdateNotifier?.notify(entitlement);
 
     // Generate payment intent ID (for reference)
     const paymentIntentId = `token_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
     // Apply product entitlements directly (no SQS) so the user gets access immediately
-    await this.applyProductEntitlementsForOneTime(userId, product, ROLE_LEARNER);
+    await this.applyProductEntitlementsForOneTime(
+      userId,
+      product,
+      ROLE_LEARNER,
+    );
 
     // Get final token balance
     const finalEntitlement = await this.entitlementRepo.findByUserAndKey(
       userId,
-      "token"
+      "token",
     );
     const remainingTokens =
       finalEntitlement && finalEntitlement.usage
-        ? finalEntitlement.usage.getEffectiveLimit() - finalEntitlement.usage.used
+        ? finalEntitlement.usage.getEffectiveLimit() -
+          finalEntitlement.usage.used
         : 0;
 
-    return {
+    const result: ChargeTokenOutput = {
       success: true,
       paymentIntentId,
       amount: requiredAmount,
       remainingTokens,
     };
+
+    if (idempotencyKey && this.processedTokenChargesRepo) {
+      await this.processedTokenChargesRepo.saveCachedResponse(
+        idempotencyKey,
+        result,
+      );
+    }
+
+    if (this.processedTokenChargesRepo) {
+      await this.processedTokenChargesRepo.recordCharge(userId);
+    }
+
+    return result;
   }
 
   /**
@@ -145,13 +199,13 @@ export class ChargeTokenUseCase {
   private async applyProductEntitlementsForOneTime(
     userId: string,
     product: { productId: string; entitlements: readonly string[] },
-    role: "learner"
+    role: "learner",
   ): Promise<void> {
     for (const key of product.entitlements) {
       const entitlementKey = key as EntitlementKey;
       const existing = await this.entitlementRepo.findByUserAndKey(
         userId,
-        entitlementKey
+        entitlementKey,
       );
       if (existing) {
         existing.status = EntitlementStatus.ACTIVE;

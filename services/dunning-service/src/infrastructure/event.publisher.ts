@@ -1,5 +1,5 @@
 import { SNSClient, PublishCommand } from "@aws-sdk/client-sns";
-import { BillingEvent } from "@libs/domain";
+import { BillingEvent, entitlementUpdatesSnsMessageAttributes } from "@libs/domain";
 
 type EntitlementRevokedEvent = BillingEvent.EntitlementRevokedEvent;
 const EntitlementEventType = BillingEvent.EntitlementEventType;
@@ -20,16 +20,20 @@ export class EntitlementEventPublisher {
 
   async publish(event: any): Promise<void> {
     try {
+      const key =
+        typeof event?.payload?.entitlementKey === "string"
+          ? event.payload.entitlementKey
+          : typeof event?.payload?.key === "string"
+            ? event.payload.key
+            : "unknown";
       await this.client.send(
         new PublishCommand({
           TopicArn: this.topicArn,
           Message: JSON.stringify(event),
-          MessageAttributes: {
-            eventType: {
-              DataType: "String",
-              StringValue: event.type || "unknown",
-            },
-          },
+          MessageAttributes: entitlementUpdatesSnsMessageAttributes(
+            event.type || "unknown",
+            key,
+          ),
         })
       );
       console.log(`Published entitlement event: ${event.type} for user ${event.payload?.userId}`);

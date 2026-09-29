@@ -9,14 +9,14 @@ output "billing_events_topic_name" {
   description = "Name of the billing events SNS topic"
 }
 
-# Entitlement Updates SNS Topic (Output)
+# Entitlement Updates SNS Topic (re-exported from access-service for subscribers)
 output "entitlement_updates_topic_arn" {
-  value       = aws_sns_topic.entitlement_updates.arn
-  description = "ARN of the entitlement updates SNS topic for other services to subscribe to"
+  value       = data.terraform_remote_state.access_service.outputs.entitlement_updates_topic_arn
+  description = "ARN of the entitlement updates SNS topic (topic owned by access-service)"
 }
 
 output "entitlement_updates_topic_name" {
-  value       = aws_sns_topic.entitlement_updates.name
+  value       = data.terraform_remote_state.access_service.outputs.entitlement_updates_topic_name
   description = "Name of the entitlement updates SNS topic"
 }
 

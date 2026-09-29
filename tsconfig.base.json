@@ -4,10 +4,12 @@
     "module": "CommonJS",
     "moduleResolution": "Node",
     "strict": true,
+    "resolveJsonModule": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "declaration": true,
+    "types": ["jest"],
 
     "baseUrl": ".",
     "paths": {

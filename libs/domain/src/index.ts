@@ -11,6 +11,7 @@ export * from "./pricing/domain/errors/domain.error";
 
 export * from "./pricing/domain/value-objects/billing-type.vo";
 export * from "./pricing/domain/value-objects/interval.vo";
+export * from "./pricing/domain/value-objects/allowed-currencies";
 
 export * from "./pricing/app/ports/price.repository.port";
 export * from "./pricing/dynamodb/price.mapper";
@@ -22,6 +23,8 @@ export * from "./pricing/app/mappers/price.mapper";
 export * from "./utils/auth/jwt.utils";
 export * from "./utils/auth/jwt.types";
 export * from "./utils/auth/errors/authentication.error";
+export * from "./utils/sns/entitlement-updates-sns-message-attributes";
+export * from "./utils/auth/errors/forbidden.error";
 
 // Entitlements
 
@@ -32,6 +35,7 @@ export * from "./entitlements/domain/value-objects/entitlement-status.vo";
 export * from "./entitlements/domain/entities/entitlement-usage.entity";
 export * from "./entitlements/domain/registry/entitlement.registry";
 export * from "./entitlements/app/ports/entitlement.repository";
+export * from "./entitlements/app/ports/entitlement-update-notifier.port";
 export * from "./entitlements/app/usecases/create.entitlement.usecase";
 export * from "./entitlements/app/usecases/update.entitlement.usecase";
 export * from "./entitlements/app/usecases/get.user.entitlements.usecase";
@@ -85,3 +89,7 @@ export * from "./transactions/index";
 // Usage events (entitlement consumption)
 
 export * from "./usage-events/index";
+
+// Product purchase intent
+
+export * from "./product-purchase-intent/index";

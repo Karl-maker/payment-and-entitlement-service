@@ -50,10 +50,15 @@ All AWS resources (DynamoDB tables, S3 buckets, SNS topics, Secrets Manager secr
 - [Development](#development)
 - [Deployment](#deployment)
 - [Project Structure](#project-structure)
+- [Additional Docs](#additional-docs)
 
 ## Overview
 
 This platform provides a complete payment and entitlement management system for education services. It consists of four main microservices that work together to manage products, pricing, user entitlements, and automatic entitlement processing based on billing events.
+
+## Additional Docs
+
+- [Learner catalog endpoints](docs/learner-catalog-endpoints.md) documents the learner API subject, topic, and sub-topic endpoints that can be used alongside payment and entitlement flows.
 
 ### Key Features
 

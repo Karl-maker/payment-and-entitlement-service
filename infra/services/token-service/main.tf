@@ -106,7 +106,8 @@ module "token_service_iam_role" {
     data.terraform_remote_state.product_service.outputs.products_table_arn,
     "${data.terraform_remote_state.product_service.outputs.products_table_arn}/index/*",
     data.terraform_remote_state.pricing_service.outputs.prices_table_arn,
-    "${data.terraform_remote_state.pricing_service.outputs.prices_table_arn}/index/*"
+    "${data.terraform_remote_state.pricing_service.outputs.prices_table_arn}/index/*",
+    data.terraform_remote_state.entitlement_service.outputs.processed_events_table_arn,
   ]
 
   tags = {
@@ -136,7 +137,7 @@ resource "aws_iam_role_policy" "secrets_manager" {
   })
 }
 
-# Additional IAM Policy for SNS Publishing
+# Additional IAM Policy for SNS Publishing (billing events + entitlement updates)
 resource "aws_iam_role_policy" "sns_publish" {
   name = "token-service-sns-publish-${var.environment}"
   role = module.token_service_iam_role.role_name
@@ -146,10 +147,13 @@ resource "aws_iam_role_policy" "sns_publish" {
     Statement = [
       {
         Effect = "Allow"
-        Action = [
-          "sns:Publish"
-        ]
+        Action = ["sns:Publish"]
         Resource = data.terraform_remote_state.entitlement_service.outputs.billing_events_topic_arn
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["sns:Publish"]
+        Resource = data.terraform_remote_state.access_service.outputs.entitlement_updates_topic_arn
       }
     ]
   })
@@ -165,11 +169,13 @@ module "token_service_lambda" {
   iam_role_arn  = module.token_service_iam_role.role_arn
 
   environment_variables = {
-    ENTITLEMENTS_TABLE     = data.terraform_remote_state.access_service.outputs.entitlements_table_name
-    PRODUCTS_TABLE         = data.terraform_remote_state.product_service.outputs.products_table_name
-    PRICES_TABLE           = data.terraform_remote_state.pricing_service.outputs.prices_table_name
-    BILLING_EVENTS_TOPIC_ARN = data.terraform_remote_state.entitlement_service.outputs.billing_events_topic_arn
-    JWT_ACCESS_TOKEN_SECRET = local.jwt_access_token_secret
+    ENTITLEMENTS_TABLE            = data.terraform_remote_state.access_service.outputs.entitlements_table_name
+    PRODUCTS_TABLE               = data.terraform_remote_state.product_service.outputs.products_table_name
+    PRICES_TABLE                  = data.terraform_remote_state.pricing_service.outputs.prices_table_name
+    PROCESSED_EVENTS_TABLE        = data.terraform_remote_state.entitlement_service.outputs.processed_events_table_name
+    BILLING_EVENTS_TOPIC_ARN      = data.terraform_remote_state.entitlement_service.outputs.billing_events_topic_arn
+    ENTITLEMENT_UPDATES_TOPIC_ARN = data.terraform_remote_state.access_service.outputs.entitlement_updates_topic_arn
+    JWT_ACCESS_TOKEN_SECRET       = local.jwt_access_token_secret
   }
 }
 

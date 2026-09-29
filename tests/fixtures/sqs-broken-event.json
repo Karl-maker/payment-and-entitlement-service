@@ -1,0 +1,25 @@
+{
+  "Records": [
+    {
+      "messageId": "msg-1",
+      "receiptHandle": "rh-1",
+      "body": "not-valid-json"
+    },
+    {
+      "messageId": "msg-2",
+      "receiptHandle": "rh-2",
+      "body": "{\"type\":\"payment.successful\",\"payload\":{\"userId\":\"user-2\",\"productId\":\"prod-2\",\"billingType\":\"one_time\",\"paymentIntentId\":\"pi_2\"},\"meta\":{\"eventId\":\"evt-2\",\"occurredAt\":\"2026-04-17T12:01:00.000Z\"},\"version\":1}",
+      "attributes": {
+        "ApproximateReceiveCount": "1",
+        "SentTimestamp": "1",
+        "SenderId": "sender",
+        "ApproximateFirstReceiveTimestamp": "1"
+      },
+      "messageAttributes": {},
+      "md5OfBody": "md5-msg-2",
+      "eventSource": "aws:sqs",
+      "eventSourceARN": "arn:aws:sqs:us-east-1:123456789012:queue",
+      "awsRegion": "us-east-1"
+    }
+  ]
+}

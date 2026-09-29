@@ -5,11 +5,13 @@ import {
   CreateEntitlementUseCase,
   SyncProductLimitsToEntitlementsUseCase,
   ProductRepositoryPorts,
+  type EntitlementUpdateNotifier,
 } from "@libs/domain";
 import { StartTrialUseCase } from "./app/usecases/start.trial.usecase";
 import { StartTrialController } from "./app/controllers/start.trial.controller";
 import { CheckTrialStatusUseCase } from "./app/usecases/check.trial.status.usecase";
 import { CheckTrialStatusController } from "./app/controllers/check.trial.status.controller";
+import { EntitlementUpdatesPublisher } from "./infrastructure/entitlement-updates.publisher";
 
 export function bootstrap() {
   const trialsTableName = process.env.TRIALS_TABLE;
@@ -30,14 +32,23 @@ export function bootstrap() {
   const productRepo = new DynamoProductRepository();
   const entitlementRepo = new DynamoEntitlementRepository(entitlementsTableName);
   const createEntitlementUseCase = new CreateEntitlementUseCase(entitlementRepo);
-  const syncProductLimitsUseCase = new SyncProductLimitsToEntitlementsUseCase(productRepo, entitlementRepo);
+  const entitlementUpdatesPublisher = new EntitlementUpdatesPublisher();
+  const entitlementUpdateNotifier: EntitlementUpdateNotifier = {
+    notify: (e) => entitlementUpdatesPublisher.publishFromEntitlement(e),
+  };
+  const syncProductLimitsUseCase = new SyncProductLimitsToEntitlementsUseCase(
+    productRepo,
+    entitlementRepo,
+    entitlementUpdateNotifier
+  );
 
   const startTrialUseCase = new StartTrialUseCase(
     trialRepo,
     productRepo as ProductRepositoryPorts.ProductRepository,
     entitlementRepo,
     createEntitlementUseCase,
-    syncProductLimitsUseCase
+    syncProductLimitsUseCase,
+    entitlementUpdateNotifier
   );
 
   const checkTrialStatusUseCase = new CheckTrialStatusUseCase(trialRepo);

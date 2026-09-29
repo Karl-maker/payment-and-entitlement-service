@@ -49,6 +49,8 @@ src/
 **Query Parameters**:
 - `userId` (optional) - The user ID to get transactions for. If not provided, uses the authenticated user's ID. Users can only view their own transactions unless they're admin.
 - `limit` (optional) - Maximum number of transactions to return (default: 100)
+- `provider` (optional) - Filter transactions by payment provider. Supported values: `stripe`, `powertranz`
+- `cursor` (optional) - Cursor returned by the previous `/transactions` response to fetch the next page
 
 **Response** (200 OK):
 ```json
@@ -64,14 +66,18 @@ src/
       "productId": "prod-premium-plan",
       "priceId": "price_xyz",
       "subscriptionId": null,
+      "provider": "powertranz",
       "createdAt": "2024-01-15T10:30:00.000Z",
       "metadata": {
         "eventId": "evt_123",
-        "billingType": "one_time"
+        "billingType": "one_time",
+        "provider": "powertranz"
       }
     }
   ],
-  "count": 1
+  "count": 1,
+  "hasMore": true,
+  "nextCursor": "eyJ1c2VySWQiOiJ1c2VyLTEyMyIsInByb3ZpZGVyIjoicG93ZXJ0cmFueiIsImNyZWF0ZWRBdCI6IjIwMjQtMDEtMTVUMTA6MzA6MDAuMDAwWiIsInRyYW5zYWN0aW9uSWQiOiJwaV9hYmMxMjMifQ=="
 }
 ```
 
@@ -85,6 +91,14 @@ src/
 ```bash
 # Get own transactions
 curl -X GET "https://api.example.com/transactions" \
+  -H "Authorization: Bearer <jwt_token>"
+
+# Get Powertranz transactions only
+curl -X GET "https://api.example.com/transactions?provider=powertranz&limit=20" \
+  -H "Authorization: Bearer <jwt_token>"
+
+# Get the next page using the returned cursor
+curl -X GET "https://api.example.com/transactions?provider=powertranz&limit=20&cursor=<nextCursor>" \
   -H "Authorization: Bearer <jwt_token>"
 
 # Get specific user's transactions (admin only)

@@ -21,3 +21,4 @@ export * from "./entitlements/entitlement-event.type";
 export * from "./entitlements/entitlement.created.event";
 export * from "./entitlements/entitlement.updated.event";
 export * from "./entitlements/entitlement.revoked.event";
+export * from "./entitlements/entitlement-availability-updated.event";

@@ -1,4 +1,5 @@
 import { EntitlementRepository } from "../ports/entitlement.repository";
+import type { EntitlementUpdateNotifier } from "../ports/entitlement-update-notifier.port";
 import { ProductRepository } from "../../../products/app/ports/product.repository.port";
 import { ResetStrategy } from "../../domain/value-objects/reset-strategy.vo";
 import { UsagePeriod } from "../../../products/domain/value-objects/useage-limit.vo";
@@ -14,7 +15,8 @@ export interface SyncProductLimitsInput {
 export class SyncProductLimitsToEntitlementsUseCase {
   constructor(
     private readonly productRepo: ProductRepository,
-    private readonly entitlementRepo: EntitlementRepository
+    private readonly entitlementRepo: EntitlementRepository,
+    private readonly entitlementUpdateNotifier?: EntitlementUpdateNotifier
   ) {}
 
   async execute(input: SyncProductLimitsInput): Promise<void> {
@@ -126,6 +128,7 @@ export class SyncProductLimitsToEntitlementsUseCase {
       }
 
       await this.entitlementRepo.update(entitlement);
+      await this.entitlementUpdateNotifier?.notify(entitlement);
     }
   }
 

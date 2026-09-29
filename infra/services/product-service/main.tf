@@ -100,6 +100,41 @@ resource "aws_dynamodb_table" "products" {
   }
 }
 
+# DynamoDB Table for Product Purchase Intent
+resource "aws_dynamodb_table" "product_purchase_intent" {
+  name         = "${var.project_name}-${var.environment}-product-purchase-intent"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "id"
+
+  attribute {
+    name = "id"
+    type = "S"
+  }
+
+  attribute {
+    name = "GSI1PK"
+    type = "S"
+  }
+
+  attribute {
+    name = "GSI1SK"
+    type = "S"
+  }
+
+  global_secondary_index {
+    name            = "GSI1"
+    hash_key        = "GSI1PK"
+    range_key       = "GSI1SK"
+    projection_type = "ALL"
+  }
+
+  tags = {
+    Environment = var.environment
+    Service     = "product-service"
+    Name        = "Product Purchase Intent Table"
+  }
+}
+
 module "product_service_iam_role" {
   source = "../../modules/lambda_iam_role"
 
@@ -107,7 +142,9 @@ module "product_service_iam_role" {
   
   dynamodb_table_arns = [
     aws_dynamodb_table.products.arn,
-    "${aws_dynamodb_table.products.arn}/index/*"
+    "${aws_dynamodb_table.products.arn}/index/*",
+    aws_dynamodb_table.product_purchase_intent.arn,
+    "${aws_dynamodb_table.product_purchase_intent.arn}/index/*"
   ]
 
   tags = {

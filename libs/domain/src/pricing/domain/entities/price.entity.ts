@@ -1,6 +1,7 @@
 import { DomainError } from "../errors/domain.error";
 import { BillingType } from "../value-objects/billing-type.vo";
 import { Interval } from "../value-objects/interval.vo";
+import { isAllowedPriceCurrency } from "../value-objects/allowed-currencies";
 
 export interface PriceProps {
   priceId: string;
@@ -210,6 +211,6 @@ export class Price {
   }
 
   private isValidCurrency(currency: string): boolean {
-    return currency.length === 3 || currency === "TOKEN";
+    return isAllowedPriceCurrency(currency);
   }
 }

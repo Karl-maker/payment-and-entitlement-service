@@ -10,6 +10,7 @@ import {
   ProductNotFoundErrors,
   ProductErrors,
   EntitlementKey,
+  type EntitlementUpdateNotifier,
 } from "@libs/domain";
 
 export interface StartTrialInput {
@@ -25,7 +26,8 @@ export class StartTrialUseCase {
     private readonly productRepo: ProductRepositoryPorts.ProductRepository,
     private readonly entitlementRepo: EntitlementRepository,
     private readonly createEntitlementUseCase: CreateEntitlementUseCase,
-    private readonly syncProductLimitsUseCase: SyncProductLimitsToEntitlementsUseCase
+    private readonly syncProductLimitsUseCase: SyncProductLimitsToEntitlementsUseCase,
+    private readonly entitlementUpdateNotifier?: EntitlementUpdateNotifier
   ) {}
 
   async execute(input: StartTrialInput): Promise<{ trialId: string; expiresAt: string }> {
@@ -91,6 +93,7 @@ export class StartTrialUseCase {
           existing.expiresAt = expiresAt;
         }
         await this.entitlementRepo.update(existing);
+        await this.entitlementUpdateNotifier?.notify(existing);
       }
     }
 

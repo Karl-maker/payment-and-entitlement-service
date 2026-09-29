@@ -1,0 +1,14 @@
+{
+  "type": "subscription.created",
+  "payload": {
+    "userId": "user-1",
+    "productId": "prod-1",
+    "currentPeriodEnd": "2026-05-17T12:00:00.000Z",
+    "addonProductIds": ["addon-1"]
+  },
+  "meta": {
+    "eventId": "evt-1",
+    "occurredAt": "2026-04-17T12:00:00.000Z"
+  },
+  "version": 1
+}

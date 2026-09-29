@@ -1,0 +1,23 @@
+services:
+  localstack:
+    # Pinned below latest: :latest has crashed on some hosts during --wait (e.g. exit 55).
+    image: localstack/localstack:3.7.2
+    volumes:
+      # Creates s3://media-test when LocalStack becomes ready (same pattern as eislett-education-api-learner).
+      - ./scripts/localstack-test-init/ready.d:/etc/localstack/init/ready.d
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=dynamodb,sns,sqs,s3
+      - DEFAULT_REGION=us-east-1
+      # For test runner / app connecting from host
+      - AWS_ENDPOINT_URL=http://localhost:4566
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_REGION=us-east-1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s

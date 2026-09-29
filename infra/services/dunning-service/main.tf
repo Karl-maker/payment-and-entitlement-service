@@ -40,7 +40,7 @@ data "aws_sns_topic" "billing_events" {
 
 # Look up entitlement updates SNS topic by name (for publishing revocation events)
 data "aws_sns_topic" "entitlement_updates" {
-  name = "${var.project_name}-${var.environment}-entitlement-updates"
+  name = "${var.project_name}-${var.environment}-entitlement-updates-topic"
 }
 
 # No dependencies on other services - uses libs/domain for shared functionality

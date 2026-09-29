@@ -3,9 +3,7 @@ import { NotFoundError } from "../../domain/errors/not-found.error";
 import { ProductType } from "../../domain/value-objects/product-type.vo";
 
 export class UpdateProductUseCase {
-  constructor(
-    private readonly repo: ProductRepository
-  ) {}
+  constructor(private readonly repo: ProductRepository) {}
 
   async execute(productId: string, input: any) {
     const product = await this.repo.findById(productId);
@@ -27,27 +25,21 @@ export class UpdateProductUseCase {
     }
 
     if (Array.isArray(input.entitlements)) {
-      input.entitlements.forEach((e: string) =>
-        product.addEntitlement(e)
-      );
+      input.entitlements.forEach((e: string) => product.addEntitlement(e));
     }
 
     if (Array.isArray(input.usageLimits)) {
-      input.usageLimits.forEach((l: any) =>
-        product.addUsageLimit(l)
-      );
+      input.usageLimits.forEach((l: any) => product.addUsageLimit(l));
     }
 
     if (
       product.type === ProductType.SUBSCRIPTION &&
       Array.isArray(input.addons)
     ) {
-      input.addons.forEach((addonId: string) =>
-        product.addAddon(addonId)
-      );
+      input.addons.forEach((addonId: string) => product.addAddon(addonId));
     }
 
-    if (input.providers && typeof input.providers === 'object') {
+    if (input.providers && typeof input.providers === "object") {
       product.updateProviders(input.providers);
     }
 
@@ -55,7 +47,8 @@ export class UpdateProductUseCase {
 
     return {
       updated: true,
-      productId: product.productId
+      name: product.name,
+      productId: product.productId,
     };
   }
 }

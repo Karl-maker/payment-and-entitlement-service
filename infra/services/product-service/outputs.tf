@@ -25,6 +25,11 @@ output "products_table_details" {
   description = "Complete details of the products DynamoDB table for use by other services"
 }
 
+output "product_purchase_intent_table_name" {
+  value       = aws_dynamodb_table.product_purchase_intent.name
+  description = "Name of the product purchase intent DynamoDB table"
+}
+
 output "lambda_function_arn" {
   value       = module.product_service_lambda.function_arn
   description = "ARN of the product service Lambda function"

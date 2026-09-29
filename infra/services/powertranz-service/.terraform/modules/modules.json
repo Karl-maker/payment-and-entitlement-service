@@ -1,0 +1,1 @@
+{"Modules":[{"Key":"","Source":"","Dir":"."},{"Key":"lambda_api_link","Source":"../../modules/lambda_api_link","Dir":"../../modules/lambda_api_link"},{"Key":"powertranz_service_iam_role","Source":"../../modules/lambda_iam_role","Dir":"../../modules/lambda_iam_role"},{"Key":"powertranz_service_lambda","Source":"../../modules/lambda","Dir":"../../modules/lambda"}]}

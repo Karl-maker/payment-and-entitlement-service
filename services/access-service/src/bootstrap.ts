@@ -8,6 +8,7 @@ import { GetUserEntitlementsController } from "./app/controllers/get.user.entitl
 import { GetUserEntitlementByKeyController } from "./app/controllers/get.user.entitlement.by.key.controller";
 import { IncrementUsageController } from "./app/controllers/increment.usage.controller";
 import { DeleteAllEntitlementsController, DeleteEntitlementByKeyController } from "./app/controllers/delete.entitlements.controller";
+import { EntitlementUpdatesPublisher } from "./infrastructure/entitlement-updates.publisher";
 
 export function bootstrap() {
   const entitlementsTableName = process.env.ENTITLEMENTS_TABLE;
@@ -16,6 +17,7 @@ export function bootstrap() {
   }
 
   const entitlementRepo = new DynamoEntitlementRepository(entitlementsTableName);
+  const entitlementUpdatesPublisher = new EntitlementUpdatesPublisher();
 
   return {
     getUserEntitlementsController: new GetUserEntitlementsController(
@@ -26,7 +28,8 @@ export function bootstrap() {
       new GetUserEntitlementByKeyUseCase(entitlementRepo)
     ),
     incrementUsageController: new IncrementUsageController(
-      new IncrementUsageUseCase(entitlementRepo)
+      new IncrementUsageUseCase(entitlementRepo),
+      entitlementUpdatesPublisher
     ),
     deleteAllEntitlementsController: new DeleteAllEntitlementsController(entitlementRepo),
     deleteEntitlementByKeyController: new DeleteEntitlementByKeyController(entitlementRepo),

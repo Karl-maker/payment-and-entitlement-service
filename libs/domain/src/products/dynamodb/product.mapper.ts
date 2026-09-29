@@ -20,9 +20,10 @@ export class ProductMapper {
       addons: product.addons,
       addonConfigs: product.addonConfigs,
       providers: product.providers,
+      targeting: product.targeting,
       isActive: product.isActive,
       createdAt: product.createdAt.toISOString(),
-      updatedAt: product.updatedAt.toISOString()
+      updatedAt: product.updatedAt.toISOString(),
     };
   }
 
@@ -37,7 +38,8 @@ export class ProductMapper {
       addons: item.addons,
       addonConfigs: item.addonConfigs,
       providers: item.providers,
-      isActive: item.isActive
+      targeting: item.targeting,
+      isActive: item.isActive,
     });
   }
 }

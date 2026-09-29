@@ -24,13 +24,15 @@ export class GetUserTransactionsController {
       throw new Error("Unauthorized: You can only view your own transactions");
     }
 
-    const limit = req.query.limit ? parseInt(req.query.limit, 10) : undefined;
+    const limit = req.query.limit ? parsePositiveInteger(req.query.limit, "limit") : undefined;
+    const provider = parseProvider(req.query.provider);
+    const cursor = req.query.cursor?.trim() || undefined;
 
-    const transactions = await this.useCase.execute({ userId, limit });
+    const result = await this.useCase.execute({ userId, limit, provider, cursor });
 
     return {
       userId,
-      transactions: transactions.map(t => ({
+      transactions: result.items.map(t => ({
         transactionId: t.transactionId,
         type: t.type,
         status: t.status,
@@ -39,10 +41,41 @@ export class GetUserTransactionsController {
         productId: t.productId,
         priceId: t.priceId,
         subscriptionId: t.subscriptionId,
+        provider: t.provider,
         createdAt: t.createdAt.toISOString(),
         metadata: t.metadata,
       })),
-      count: transactions.length,
+      count: result.items.length,
+      hasMore: result.hasMore,
+      nextCursor: result.nextCursor,
     };
   };
+}
+
+function parsePositiveInteger(value: string, fieldName: string): number {
+  const parsed = Number.parseInt(value, 10);
+
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    const error = new Error(`${fieldName} must be a positive integer`);
+    error.name = "ValidationError";
+    throw error;
+  }
+
+  return parsed;
+}
+
+function parseProvider(value?: string): "stripe" | "powertranz" | undefined {
+  const normalized = value?.trim().toLowerCase();
+
+  if (!normalized) {
+    return undefined;
+  }
+
+  if (normalized === "stripe" || normalized === "powertranz") {
+    return normalized;
+  }
+
+  const error = new Error("provider must be one of: stripe, powertranz");
+  error.name = "ValidationError";
+  throw error;
 }

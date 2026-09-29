@@ -58,6 +58,17 @@ locals {
   )
 }
 
+# SNS Topic for Entitlement Updates (usage/availability changes). Consumed by downstream subscribers.
+resource "aws_sns_topic" "entitlement_updates" {
+  name = "${var.project_name}-${var.environment}-entitlement-updates-topic"
+
+  tags = {
+    Environment = var.environment
+    Service     = "access-service"
+    Name        = "Entitlement Updates Topic"
+  }
+}
+
 # DynamoDB Table for Entitlements
 resource "aws_dynamodb_table" "entitlements" {
   name         = "${var.project_name}-${var.environment}-entitlements"
@@ -99,6 +110,25 @@ module "access_service_iam_role" {
   }
 }
 
+# Additional IAM Policy for SNS Publish (entitlement updates)
+resource "aws_iam_role_policy" "sns_entitlement_updates" {
+  name = "access-service-sns-entitlement-updates-${var.environment}"
+  role = module.access_service_iam_role.role_name
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "sns:Publish"
+        ]
+        Resource = aws_sns_topic.entitlement_updates.arn
+      }
+    ]
+  })
+}
+
 # Additional IAM Policy for Secrets Manager
 resource "aws_iam_role_policy" "secrets_manager" {
   name = "access-service-secrets-manager-${var.environment}"
@@ -130,9 +160,10 @@ module "access_service_lambda" {
   iam_role_arn  = module.access_service_iam_role.role_arn
 
   environment_variables = {
-    ENTITLEMENTS_TABLE      = aws_dynamodb_table.entitlements.name
-    JWT_ACCESS_TOKEN_SECRET = local.jwt_access_token_secret
-    ENVIRONMENT             = var.environment
+    ENTITLEMENTS_TABLE           = aws_dynamodb_table.entitlements.name
+    ENTITLEMENT_UPDATES_TOPIC_ARN = aws_sns_topic.entitlement_updates.arn
+    JWT_ACCESS_TOKEN_SECRET      = local.jwt_access_token_secret
+    ENVIRONMENT                  = var.environment
   }
 }
 

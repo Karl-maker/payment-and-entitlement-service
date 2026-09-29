@@ -137,6 +137,22 @@ resource "aws_iam_role_policy" "sqs_access" {
   })
 }
 
+resource "aws_iam_role_policy" "sns_entitlement_updates" {
+  name = "usage-event-service-sns-entitlement-updates-${var.environment}"
+  role = module.usage_event_service_iam_role.role_name
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["sns:Publish"]
+        Resource = data.terraform_remote_state.access_service.outputs.entitlement_updates_topic_arn
+      }
+    ]
+  })
+}
+
 module "usage_event_lambda" {
   source = "../../modules/lambda"
 
@@ -147,7 +163,8 @@ module "usage_event_lambda" {
   iam_role_arn  = module.usage_event_service_iam_role.role_arn
 
   environment_variables = {
-    ENTITLEMENTS_TABLE = data.terraform_remote_state.access_service.outputs.entitlements_table_name
+    ENTITLEMENTS_TABLE            = data.terraform_remote_state.access_service.outputs.entitlements_table_name
+    ENTITLEMENT_UPDATES_TOPIC_ARN = data.terraform_remote_state.access_service.outputs.entitlement_updates_topic_arn
   }
 }
 

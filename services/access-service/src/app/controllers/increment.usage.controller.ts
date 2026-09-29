@@ -1,9 +1,13 @@
 import { RequestContext } from "../../handler/api-gateway/types";
 import { IncrementUsageUseCase } from "@libs/domain";
 import { AuthenticationError } from "@libs/domain";
+import type { EntitlementUpdatesPublisher } from "../../infrastructure/entitlement-updates.publisher";
 
 export class IncrementUsageController {
-  constructor(private readonly useCase: IncrementUsageUseCase) {}
+  constructor(
+    private readonly useCase: IncrementUsageUseCase,
+    private readonly entitlementUpdatesPublisher?: EntitlementUpdatesPublisher
+  ) {}
 
   handle = async (req: RequestContext) => {
     const userId = req.user?.id;
@@ -25,6 +29,8 @@ export class IncrementUsageController {
       throw err;
     }
 
-    return await this.useCase.execute({ userId, key, amount });
+    const result = await this.useCase.execute({ userId, key, amount });
+    await this.entitlementUpdatesPublisher?.publishAvailabilityUpdated(userId, key, result.remaining);
+    return result;
   };
 }

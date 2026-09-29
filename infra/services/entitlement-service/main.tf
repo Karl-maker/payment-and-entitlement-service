@@ -84,21 +84,6 @@ resource "aws_sns_topic" "billing_events" {
   }
 }
 
-# SNS Topic for Entitlement Updates (Output)
-resource "aws_sns_topic" "entitlement_updates" {
-  name = "${var.project_name}-${var.environment}-entitlement-updates"
-
-  tags = {
-    Environment = var.environment
-    Service     = "entitlement-service"
-    Name        = "Entitlement Updates Topic"
-  }
-
-  lifecycle {
-    ignore_changes = [tags]
-  }
-}
-
 # SQS Dead Letter Queue
 resource "aws_sqs_queue" "entitlement_dlq" {
   name = "${var.project_name}-${var.environment}-entitlement-dlq"
@@ -205,7 +190,7 @@ module "entitlement_iam_role" {
   }
 }
 
-# Additional IAM Policy for SNS Publishing
+# Additional IAM Policy for SNS Publishing (entitlement updates topic owned by access-service)
 resource "aws_iam_role_policy" "sns_publish" {
   name = "entitlement-sns-publish-${var.environment}"
   role = module.entitlement_iam_role.role_name
@@ -218,7 +203,7 @@ resource "aws_iam_role_policy" "sns_publish" {
         Action = [
           "sns:Publish"
         ]
-        Resource = aws_sns_topic.entitlement_updates.arn
+        Resource = data.terraform_remote_state.access_service.outputs.entitlement_updates_topic_arn
       }
     ]
   })
@@ -256,11 +241,11 @@ module "entitlement_lambda" {
   iam_role_arn  = module.entitlement_iam_role.role_arn
 
   environment_variables = {
-    PRODUCTS_TABLE                = data.terraform_remote_state.product_service.outputs.products_table_name
-    ENTITLEMENTS_TABLE            = data.terraform_remote_state.access_service.outputs.entitlements_table_name
-    PROCESSED_EVENTS_TABLE        = aws_dynamodb_table.processed_events.name
-    ENTITLEMENT_UPDATES_TOPIC_ARN = aws_sns_topic.entitlement_updates.arn
-    DUNNING_TABLE                 = local.dunning_table_name # Looked up by name using libs/domain
+    PRODUCTS_TABLE                 = data.terraform_remote_state.product_service.outputs.products_table_name
+    ENTITLEMENTS_TABLE              = data.terraform_remote_state.access_service.outputs.entitlements_table_name
+    PROCESSED_EVENTS_TABLE          = aws_dynamodb_table.processed_events.name
+    ENTITLEMENT_UPDATES_TOPIC_ARN   = data.terraform_remote_state.access_service.outputs.entitlement_updates_topic_arn
+    DUNNING_TABLE                   = local.dunning_table_name # Looked up by name using libs/domain
   }
 }
 
